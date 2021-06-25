@@ -1,6 +1,6 @@
 {
-  "name": "mongodb-queue",
-  "version": "4.0.0",
+  "name": "@reedsy/mongodb-queue",
+  "version": "4.0.0-reedsy-1.0.0",
   "description": "Message queues which uses MongoDB.",
   "main": "mongodb-queue.js",
   "scripts": {
@@ -15,7 +15,7 @@
   "homepage": "https://github.com/chilts/mongodb-queue",
   "repository": {
     "type": "git",
-    "url": "git://github.com/chilts/mongodb-queue.git"
+    "url": "git://github.com/reedsy/mongodb-queue.git"
   },
   "bugs": {
     "url": "http://github.com/chilts/mongodb-queue/issues",
