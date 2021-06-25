@@ -11,6 +11,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-18.04
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+        - 27017:27017
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v2
