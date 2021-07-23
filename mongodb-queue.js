@@ -44,7 +44,6 @@ function Queue(db, name, opts) {
     this.col = db.collection(name)
     this.visibility = opts.visibility || 30
     this.delay = opts.delay || 0
-    this.returnDocument = opts.returnDocument
 
     if ( opts.deadQueue ) {
         this.deadQueue = opts.deadQueue
@@ -95,7 +94,7 @@ Queue.prototype.add = function(payload, opts, callback) {
     self.col.insertMany(msgs, function(err, results) {
         if (err) return callback(err)
         if (payload instanceof Array) return callback(null, '' + results.insertedIds)
-        callback(null, '' + results.ops[0]._id)
+        callback(null, '' + results.insertedIds[0])
     })
 }
 
@@ -121,9 +120,10 @@ Queue.prototype.get = function(opts, callback) {
             visible : nowPlusSecs(visibility),
         }
     }
-    var options = self._optionsWithNewDocument({
-        sort: sort
-    })
+    var options = {
+        sort: sort,
+        returnDocument: 'after'
+    }
 
     self.col.findOneAndUpdate(query, update, options, function(err, result) {
         if (err) return callback(err)
@@ -179,7 +179,9 @@ Queue.prototype.ping = function(ack, opts, callback) {
             visible : nowPlusSecs(visibility)
         }
     }
-    var options = self._optionsWithNewDocument({})
+    var options = {
+        returnDocument: 'after'
+    }
 
     if (opts.resetTries) {
         update.$set.tries = 0
@@ -207,8 +209,10 @@ Queue.prototype.ack = function(ack, callback) {
             deleted : now(),
         }
     }
-    var options = self._optionsWithNewDocument({})
-    self.col.findOneAndUpdate(query, update, options, function(err, msg, blah) {
+    var options = {
+        returnDocument: 'after'
+    }
+    self.col.findOneAndUpdate(query, update, options, function(err, msg) {
         if (err) return callback(err)
         if ( !msg.value ) {
             return callback(new Error("Queue.ack(): Unidentified ack : " + ack))
@@ -276,13 +280,4 @@ Queue.prototype.done = function(callback) {
         if (err) return callback(err)
         callback(null, count)
     })
-}
-
-Queue.prototype._optionsWithNewDocument = function(query) {
-    if (this.returnDocument) {
-        query.returnDocument = 'after'
-    } else {
-        query.returnOriginal = false
-    }
-    return query
 }
