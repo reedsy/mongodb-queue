@@ -1,6 +1,6 @@
 {
   "name": "@reedsy/mongodb-queue",
-  "version": "4.0.0-reedsy-2.0.1",
+  "version": "4.0.0-reedsy-3.0.0",
   "description": "Message queues which uses MongoDB.",
   "main": "mongodb-queue.js",
   "scripts": {
@@ -8,12 +8,11 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "async": "^2.6.2",
-    "mongodb": "^4.0.0",
+    "mongodb": "^5.0.0",
     "tape": "^4.10.1"
   },
   "peerDependencies": {
-    "mongodb": "^4.0.0"
+    "mongodb": "^4.0.0 || ^5.0.0"
   },
   "homepage": "https://github.com/chilts/mongodb-queue",
   "repository": {

@@ -1,235 +1,117 @@
-var async = require('async')
-var test = require('tape')
+const test = require('tape')
+const {timeout} = require('./_timeout')
 
-var setup = require('./setup.js')
-var mongoDbQueue = require('../')
+const setup = require('./setup.js')
+const MongoDbQueue = require('../')
 
-setup(function(client, db) {
+setup().then(({client, db}) => {
 
-    test('ping: check a retrieved message with a ping can still be acked', function(t) {
-        var queue = mongoDbQueue(db, 'ping', { visibility : 5 })
-        var msg
+    test('ping: check a retrieved message with a ping can still be acked', async function (t) {
+        const queue = new MongoDbQueue(db, 'ping', {visibility: 5})
+        let msg
+        let id
 
-        async.series(
-            [
-                function(next) {
-                    queue.add('Hello, World!', function(err, id) {
-                        t.ok(!err, 'There is no error when adding a message.')
-                        t.ok(id, 'There is an id returned when adding a message.')
-                        next()
-                    })
-                },
-                function(next) {
-                    // get something now and it shouldn't be there
-                    queue.get(function(err, thisMsg) {
-                        msg = thisMsg
-                        t.ok(!err, 'No error when getting this message')
-                        t.ok(msg.id, 'Got this message id')
-                        // now wait 4s
-                        setTimeout(next, 4 * 1000)
-                    })
-                },
-                function(next) {
-                    // ping this message so it will be kept alive longer, another 5s
-                    queue.ping(msg.ack, function(err, id) {
-                        t.ok(!err, 'No error when pinging a message')
-                        t.ok(id, 'Received an id when acking this message')
-                        // now wait 4s
-                        setTimeout(next, 4 * 1000)
-                    })
-                },
-                function(next) {
-                    queue.ack(msg.ack, function(err, id) {
-                        t.ok(!err, 'No error when acking this message')
-                        t.ok(id, 'Received an id when acking this message')
-                        next()
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        t.ok(!err, 'No error when getting no messages')
-                        t.ok(!msg, 'No message when getting from an empty queue')
-                        next()
-                    })
-                },
-            ],
-            function(err) {
-                if (err) t.fail(err)
-                t.pass('Finished test ok')
-                t.end()
-            }
-        )
+        id = await queue.add('Hello, World!')
+        t.ok(id, 'There is an id returned when adding a message.')
+        // get something now and it shouldn't be there
+        msg = await queue.get()
+        t.ok(msg.id, 'Got this message id')
+        await timeout(4_000)
+        // ping this message so it will be kept alive longer, another 5s
+        id = await queue.ping(msg.ack)
+        t.ok(id, 'Received an id when acking this message')
+        await timeout(4_000)
+        id = await queue.ack(msg.ack)
+        t.ok(id, 'Received an id when acking this message')
+        msg = await queue.get()
+        t.ok(!msg, 'No message when getting from an empty queue')
+
+        t.pass('Finished test ok')
+        t.end()
     })
 
-    test("ping: check that an acked message can't be pinged", function(t) {
-        var queue = mongoDbQueue(db, 'ping', { visibility : 5 })
-        var msg
+    test("ping: check that an acked message can't be pinged", async function (t) {
+        const queue = new MongoDbQueue(db, 'ping', {visibility: 5})
+        let msg
+        let id
 
-        async.series(
-            [
-                function(next) {
-                    queue.add('Hello, World!', function(err, id) {
-                        t.ok(!err, 'There is no error when adding a message.')
-                        t.ok(id, 'There is an id returned when adding a message.')
-                        next()
-                    })
-                },
-                function(next) {
-                    // get something now and it shouldn't be there
-                    queue.get(function(err, thisMsg) {
-                        msg = thisMsg
-                        t.ok(!err, 'No error when getting this message')
-                        t.ok(msg.id, 'Got this message id')
-                        next()
-                    })
-                },
-                function(next) {
-                    // ack the message
-                    queue.ack(msg.ack, function(err, id) {
-                        t.ok(!err, 'No error when acking this message')
-                        t.ok(id, 'Received an id when acking this message')
-                        next()
-                    })
-                },
-                function(next) {
-                    // ping this message, even though it has been acked
-                    queue.ping(msg.ack, function(err, id) {
-                        t.ok(err, 'Error when pinging an acked message')
-                        t.ok(!id, 'Received no id when pinging an acked message')
-                        next()
-                    })
-                },
-            ],
-            function(err) {
-                if (err) t.fail(err)
-                t.pass('Finished test ok')
-                t.end()
-            }
-        )
+        id = await queue.add('Hello, World!')
+        t.ok(id, 'There is an id returned when adding a message.')
+        // get something now and it shouldn't be there
+        msg = await queue.get()
+        t.ok(msg.id, 'Got this message id')
+        // ack the message
+        id = await queue.ack(msg.ack)
+        t.ok(id, 'Received an id when acking this message')
+        // ping this message, even though it has been acked
+        id = await queue.ping(msg.ack)
+            .catch((err) => t.ok(err, 'Error when pinging an acked message'))
+        t.ok(!id, 'Received no id when pinging an acked message')
+
+        t.pass('Finished test ok')
+        t.end()
     })
 
-test("ping: check visibility option overrides the queue visibility", function(t) {
-        var queue = mongoDbQueue(db, 'ping', { visibility : 3 })
-        var msg
+    test("ping: check visibility option overrides the queue visibility", async function (t) {
+        const queue = new MongoDbQueue(db, 'ping', {visibility: 3})
+        let msg
+        let id
 
-        async.series(
-            [
-                function(next) {
-                    queue.add('Hello, World!', function(err, id) {
-                        t.ok(!err, 'There is no error when adding a message.')
-                        t.ok(id, 'There is an id returned when adding a message.')
-                        next()
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, thisMsg) {
-                        msg = thisMsg
-                        // message should reset in three seconds
-                        t.ok(msg.id, 'Got a msg.id (sanity check)')
-                        setTimeout(next, 2 * 1000)
-                    })
-                },
-                function(next) {
-                    // ping this message so it will be kept alive longer, another 5s instead of 3s
-                    queue.ping(msg.ack, { visibility: 5 }, function(err, id) {
-                        t.ok(!err, 'No error when pinging a message')
-                        t.ok(id, 'Received an id when acking this message')
-                        // wait 4s so the msg would normally have returns to the queue
-                        setTimeout(next, 4 * 1000)
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        // messages should not be back yet
-                        t.ok(!err, 'No error when getting no messages')
-                        t.ok(!msg, 'No msg received')
-                        // wait 2s so the msg should have returns to the queue
-                        setTimeout(next, 2 * 1000)
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        // yes, there should be a message on the queue again
-                        t.ok(msg.id, 'Got a msg.id (sanity check)')
-                        queue.ack(msg.ack, function(err) {
-                            t.ok(!err, 'No error when acking the message')
-                            next()
-                        })
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        // no more messages
-                        t.ok(!err, 'No error when getting no messages')
-                        t.ok(!msg, 'No msg received')
-                        next()
-                    })
-                }
-            ],
-            function(err) {
-                if (err) t.fail(err)
-                t.pass('Finished test ok')
-                t.end()
-            }
-        )
+        id = await queue.add('Hello, World!')
+        t.ok(id, 'There is an id returned when adding a message.')
+        msg = await queue.get()
+        // message should reset in three seconds
+        t.ok(msg.id, 'Got a msg.id (sanity check)')
+        await timeout(2_000)
+        // ping this message so it will be kept alive longer, another 5s instead of 3s
+        id = await queue.ping(msg.ack, {visibility: 5})
+        t.ok(id, 'Received an id when acking this message')
+        // wait 4s so the msg would normally have returns to the queue
+        await timeout(4_000)
+        msg = await queue.get()
+        // messages should not be back yet
+        t.ok(!msg, 'No msg received')
+        // wait 2s so the msg should have returns to the queue
+        await timeout(2_000)
+        msg = await queue.get()
+        // yes, there should be a message on the queue again
+        t.ok(msg.id, 'Got a msg.id (sanity check)')
+        await queue.ack(msg.ack)
+        msg = await queue.get()
+        // no more messages
+        t.ok(!msg, 'No msg received')
+
+        t.pass('Finished test ok')
+        t.end()
     })
 
-    test("ping: reset tries", function(t) {
-        var queue = mongoDbQueue(db, 'ping', { visibility: 3 })
-        var msg
+    test("ping: reset tries", async function (t) {
+        const queue = new MongoDbQueue(db, 'ping', {visibility: 3})
+        let msg
+        let id
 
-        async.series(
-            [
-                function(next) {
-                    queue.add('Hello, World!', function(err, id) {
-                        t.ok(!err, 'There is no error when adding a message.')
-                        t.ok(id, 'There is an id returned when adding a message.')
-                        next()
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, thisMsg) {
-                        msg = thisMsg
-                        // message should reset in three seconds
-                        t.ok(msg.id, 'Got a msg.id (sanity check)')
-                        setTimeout(next, 2 * 1000)
-                    })
-                },
-                function(next) {
-                    queue.ping(msg.ack, { resetTries: true }, function(err, id) {
-                        t.ok(!err, 'No error when pinging a message')
-                        t.ok(id, 'Received an id when acking this message')
-                        // wait until the msg has returned to the queue
-                        setTimeout(next, 6 * 1000)
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        t.equal(msg.tries, 1, 'Tries were reset')
-                        queue.ack(msg.ack, function(err) {
-                            t.ok(!err, 'No error when acking the message')
-                            next()
-                        })
-                    })
-                },
-                function(next) {
-                    queue.get(function(err, msg) {
-                        // no more messages
-                        t.ok(!err, 'No error when getting no messages')
-                        t.ok(!msg, 'No msg received')
-                        next()
-                    })
-                }
-            ],
-            function(err) {
-                if (err) t.fail(err)
-                t.pass('Finished test ok')
-                t.end()
-            }
-        )
+        id = await queue.add('Hello, World!')
+        t.ok(id, 'There is an id returned when adding a message.')
+        msg = await queue.get()
+        // message should reset in three seconds
+        t.ok(msg.id, 'Got a msg.id (sanity check)')
+        await timeout(2_000)
+        id = await queue.ping(msg.ack, {resetTries: true})
+        t.ok(id, 'Received an id when acking this message')
+        // wait until the msg has returned to the queue
+        await timeout(6_000)
+        msg = await queue.get()
+        t.equal(msg.tries, 1, 'Tries were reset')
+        await queue.ack(msg.ack)
+        msg = await queue.get()
+        // no more messages
+        t.ok(!msg, 'No msg received')
+
+        t.pass('Finished test ok')
+        t.end()
     })
 
-    test('client.close()', function(t) {
+    test('client.close()', function (t) {
         t.pass('client.close()')
         client.close()
         t.end()
