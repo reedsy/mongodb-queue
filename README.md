@@ -26,7 +26,7 @@ const client = new mongodb.MongoClient(url, { useNewUrlParser: true })
 
 client.connect(err => {
   const db = client.db('test')
-  const queue = mongoDbQueue(db, 'my-queue')
+  const queue = new MongoDbQueue(db, 'my-queue')
 
   // ...
 
@@ -102,9 +102,9 @@ passed in:
 var mongoDbQueue = require('mongodb-queue')
 
 // an instance of a queue
-var queue1 = mongoDbQueue(db, 'a-queue')
+var queue1 = new MongoDbQueue(db, 'a-queue')
 // another queue which uses the same collection as above
-var queue2 = mongoDbQueue(db, 'a-queue')
+var queue2 = new MongoDbQueue(db, 'a-queue')
 ```
 
 Using `queue1` and `queue2` here won't interfere with each other and will play along nicely, but that's not
@@ -116,7 +116,7 @@ it's not something you should do.
 To pass in options for the queue:
 
 ```
-var resizeQueue = mongoDbQueue(db, 'resize-queue', { visibility : 30, delay : 15 })
+var resizeQueue = new MongoDbQueue(db, 'resize-queue', { visibility : 30, delay : 15 })
 ```
 
 This example shows a queue with a message visibility of 30s and a delay to each message of 15s.
@@ -131,8 +131,8 @@ Each queue you create will be it's own collection.
 e.g.
 
 ```
-var resizeImageQueue = mongoDbQueue(db, 'resize-image-queue')
-var notifyOwnerQueue = mongoDbQueue(db, 'notify-owner-queue')
+var resizeImageQueue = new MongoDbQueue(db, 'resize-image-queue')
+var notifyOwnerQueue = new MongoDbQueue(db, 'notify-owner-queue')
 ```
 
 This will create two collections in MongoDB called `resize-image-queue` and `notify-owner-queue`.
@@ -149,7 +149,7 @@ You may set this visibility window on a per queue basis. For example, to set the
 visibility to 15 seconds:
 
 ```
-var queue = mongoDbQueue(db, 'queue', { visibility : 15 })
+var queue = new MongoDbQueue(db, 'queue', { visibility : 15 })
 ```
 
 All messages in this queue now have a visibility window of 15s, instead of the
@@ -167,7 +167,7 @@ retrieval 10s after being added.
 To delay all messages by 10 seconds, try this:
 
 ```
-var queue = mongoDbQueue(db, 'queue', { delay : 10 })
+var queue = new MongoDbQueue(db, 'queue', { delay : 10 })
 ```
 
 This is now the default for every message added to the queue.
@@ -182,8 +182,8 @@ automatically see problem messages.
 Pass in a queue (that you created) onto which these messages will be pushed:
 
 ```js
-var deadQueue = mongoDbQueue(db, 'dead-queue')
-var queue = mongoDbQueue(db, 'queue', { deadQueue : deadQueue })
+var deadQueue = new MongoDbQueue(db, 'dead-queue')
+var queue = new MongoDbQueue(db, 'queue', { deadQueue : deadQueue })
 ```
 
 If you pop a message off the `queue` over `maxRetries` times and still have not acked it,
@@ -246,7 +246,7 @@ If you want to opt in to using the newer `returnDocument`, set the `returnDocume
 to `true`:
 
 ```
-var queue = mongoDbQueue(db, 'queue', { returnDocument : true })
+var queue = new MongoDbQueue(db, 'queue', { returnDocument : true })
 ```
 
 ## Operations ##

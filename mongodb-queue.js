@@ -10,32 +10,27 @@
  *
  **/
 
-var crypto = require('crypto')
+const crypto = require('crypto')
 
-// some helper functions
 function id() {
-    return crypto.randomBytes(16).toString('hex')
+  return crypto.randomBytes(16).toString('hex')
 }
 
 function now() {
-    return (new Date()).toISOString()
+  return (new Date()).toISOString()
 }
 
 function nowPlusSecs(secs) {
-    return (new Date(Date.now() + secs * 1000)).toISOString()
+  return (new Date(Date.now() + secs * 1000)).toISOString()
 }
 
-module.exports = function(db, name, opts) {
-    return new Queue(db, name, opts)
-}
-
-// the Queue object itself
-function Queue(db, name, opts) {
-    if ( !db ) {
-        throw new Error("mongodb-queue: provide a mongodb.MongoClient.db")
+module.exports = class Queue {
+  constructor(db, name, opts) {
+    if (!db) {
+      throw new Error("mongodb-queue: provide a mongodb.MongoClient.db")
     }
-    if ( !name ) {
-        throw new Error("mongodb-queue: provide a queue name")
+    if (!name) {
+      throw new Error("mongodb-queue: provide a queue name")
     }
     opts = opts || {}
 
@@ -45,242 +40,179 @@ function Queue(db, name, opts) {
     this.visibility = opts.visibility || 30
     this.delay = opts.delay || 0
 
-    if ( opts.deadQueue ) {
-        this.deadQueue = opts.deadQueue
-        this.maxRetries = opts.maxRetries || 5
+    if (opts.deadQueue) {
+      this.deadQueue = opts.deadQueue
+      this.maxRetries = opts.maxRetries || 5
     }
-}
+  }
 
-Queue.prototype.createIndexes = function(callback) {
-    var self = this
+  async createIndexes() {
+    await Promise.all([
+      this.col.createIndex({deleted: 1, visible: 1}),
+      this.col.createIndex({ack: 1}, {unique: true, sparse: true}),
+      this.col.createIndex({deleted: 1}, {sparse: true})
+    ])
+  }
 
-    self.col.createIndex({ deleted : 1, visible : 1 }, function(err, indexname) {
-        if (err) return callback(err)
-        self.col.createIndex({ ack : 1 }, { unique : true, sparse : true }, function(err) {
-            if (err) return callback(err)
-            self.col.createIndex({ deleted : 1 }, { sparse : true }, function(err) {
-                if (err) return callback(err)
-                callback(null, indexname)
-            })
-        })
-    })
-}
+  async add(payload, opts = {}) {
+    const delay = opts.delay || this.delay
+    const visible = delay ? nowPlusSecs(delay) : now()
 
-Queue.prototype.add = function(payload, opts, callback) {
-    var self = this
-    if ( !callback ) {
-        callback = opts
-        opts = {}
-    }
-    var delay = opts.delay || self.delay
-    var visible = delay ? nowPlusSecs(delay) : now()
-
-    var msgs = []
+    const msgs = []
     if (payload instanceof Array) {
-        if (payload.length === 0) {
-            var errMsg = 'Queue.add(): Array payload length must be greater than 0'
-            return callback(new Error(errMsg))
-        }
-        payload.forEach(function(payload) {
-            msgs.push({
-                visible  : visible,
-                payload  : payload,
-            })
-        })
-    } else {
+      if (payload.length === 0) {
+        throw new Error('Queue.add(): Array payload length must be greater than 0')
+      }
+      payload.forEach(function (payload) {
         msgs.push({
-            visible  : visible,
-            payload  : payload,
+          visible: visible,
+          payload: payload,
         })
+      })
+    } else {
+      msgs.push({
+        visible: visible,
+        payload: payload,
+      })
     }
 
-    self.col.insertMany(msgs, function(err, results) {
-        if (err) return callback(err)
-        if (payload instanceof Array) return callback(null, '' + results.insertedIds)
-        callback(null, '' + results.insertedIds[0])
-    })
-}
+    const results = await this.col.insertMany(msgs)
+    if (payload instanceof Array) return '' + results.insertedIds
+    return '' + results.insertedIds[0]
+  }
 
-Queue.prototype.get = function(opts, callback) {
-    var self = this
-    if ( !callback ) {
-        callback = opts
-        opts = {}
+  async get(opts = {}) {
+    const visibility = opts.visibility || this.visibility
+    const query = {
+      deleted: null,
+      visible: {$lte: now()},
     }
-
-    var visibility = opts.visibility || self.visibility
-    var query = {
-        deleted : null,
-        visible : { $lte : now() },
+    const sort = {
+      _id: 1
     }
-    var sort = {
-        _id : 1
+    const update = {
+      $inc: {tries: 1},
+      $set: {
+        ack: id(),
+        visible: nowPlusSecs(visibility),
+      }
     }
-    var update = {
-        $inc : { tries : 1 },
-        $set : {
-            ack     : id(),
-            visible : nowPlusSecs(visibility),
-        }
-    }
-    var options = {
-        sort: sort,
-        returnDocument: 'after'
+    const options = {
+      sort: sort,
+      returnDocument: 'after'
     }
 
-    self.col.findOneAndUpdate(query, update, options, function(err, result) {
-        if (err) return callback(err)
-        var msg = result.value
-        if (!msg) return callback()
+    const result = await this.col.findOneAndUpdate(query, update, options)
+    let msg = result.value
+    if (!msg) return
 
-        // convert to an external representation
-        msg = {
-            // convert '_id' to an 'id' string
-            id      : '' + msg._id,
-            ack     : msg.ack,
-            payload : msg.payload,
-            tries   : msg.tries,
-        }
-        // if we have a deadQueue, then check the tries, else don't
-        if ( self.deadQueue ) {
-            // check the tries
-            if ( msg.tries > self.maxRetries ) {
-                // So:
-                // 1) add this message to the deadQueue
-                // 2) ack this message from the regular queue
-                // 3) call ourself to return a new message (if exists)
-                self.deadQueue.add(msg, function(err) {
-                    if (err) return callback(err)
-                    self.ack(msg.ack, function(err) {
-                        if (err) return callback(err)
-                        self.get(callback)
-                    })
-                })
-                return
-            }
-        }
-
-        callback(null, msg)
-    })
-}
-
-Queue.prototype.ping = function(ack, opts, callback) {
-    var self = this
-    if ( !callback ) {
-        callback = opts
-        opts = {}
+    // convert to an external representation
+    msg = {
+      // convert '_id' to an 'id' string
+      id: '' + msg._id,
+      ack: msg.ack,
+      payload: msg.payload,
+      tries: msg.tries,
     }
 
-    var visibility = opts.visibility || self.visibility
-    var query = {
-        ack     : ack,
-        visible : { $gt : now() },
-        deleted : null,
+    // check the tries
+    if (this.deadQueue && msg.tries > this.maxRetries) {
+      // So:
+      // 1) add this message to the deadQueue
+      // 2) ack this message from the regular queue
+      // 3) call ourself to return a new message (if exists)
+      await this.deadQueue.add(msg)
+      await this.ack(msg.ack)
+      return this.get()
     }
-    var update = {
-        $set : {
-            visible : nowPlusSecs(visibility)
-        }
+
+    return msg
+  }
+
+  async ping(ack, opts = {}) {
+    const visibility = opts.visibility || this.visibility
+    const query = {
+      ack: ack,
+      visible: {$gt: now()},
+      deleted: null,
     }
-    var options = {
-        returnDocument: 'after'
+    const update = {
+      $set: {
+        visible: nowPlusSecs(visibility)
+      }
+    }
+    const options = {
+      returnDocument: 'after'
     }
 
     if (opts.resetTries) {
-        update.$set.tries = 0
+      update.$set.tries = 0
     }
 
-    self.col.findOneAndUpdate(query, update, options, function(err, msg, blah) {
-        if (err) return callback(err)
-        if ( !msg.value ) {
-            return callback(new Error("Queue.ping(): Unidentified ack  : " + ack))
-        }
-        callback(null, '' + msg.value._id)
-    })
-}
-
-Queue.prototype.ack = function(ack, callback) {
-    var self = this
-
-    var query = {
-        ack     : ack,
-        visible : { $gt : now() },
-        deleted : null,
+    const msg = await this.col.findOneAndUpdate(query, update, options)
+    if (!msg.value) {
+      throw new Error("Queue.ping(): Unidentified ack  : " + ack)
     }
-    var update = {
-        $set : {
-            deleted : now(),
-        }
-    }
-    var options = {
-        returnDocument: 'after'
-    }
-    self.col.findOneAndUpdate(query, update, options, function(err, msg) {
-        if (err) return callback(err)
-        if ( !msg.value ) {
-            return callback(new Error("Queue.ack(): Unidentified ack : " + ack))
-        }
-        callback(null, '' + msg.value._id)
-    })
-}
+    return '' + msg.value._id
+  }
 
-Queue.prototype.clean = function(callback) {
-    var self = this
+  async ack(ack) {
+    const query = {
+      ack: ack,
+      visible: {$gt: now()},
+      deleted: null,
+    }
+    const update = {
+      $set: {
+        deleted: now(),
+      }
+    }
+    const options = {
+      returnDocument: 'after'
+    }
+    const msg = await this.col.findOneAndUpdate(query, update, options)
+    if (!msg.value) {
+      throw new Error("Queue.ack(): Unidentified ack : " + ack)
+    }
+    return '' + msg.value._id
+  }
 
-    var query = {
-        deleted : { $exists : true },
+  async clean() {
+    const query = {
+      deleted: {$exists: true},
     }
 
-    self.col.deleteMany(query, callback)
-}
+    return this.col.deleteMany(query)
+  }
 
-Queue.prototype.total = function(callback) {
-    var self = this
+  async total() {
+    return this.col.countDocuments()
+  }
 
-    self.col.countDocuments(function(err, count) {
-        if (err) return callback(err)
-        callback(null, count)
-    })
-}
-
-Queue.prototype.size = function(callback) {
-    var self = this
-
-    var query = {
-        deleted : null,
-        visible : { $lte : now() },
+  async size() {
+    const query = {
+      deleted: null,
+      visible: {$lte: now()},
     }
 
-    self.col.countDocuments(query, function(err, count) {
-        if (err) return callback(err)
-        callback(null, count)
-    })
-}
+    return this.col.countDocuments(query)
+  }
 
-Queue.prototype.inFlight = function(callback) {
-    var self = this
-
-    var query = {
-        ack     : { $exists : true },
-        visible : { $gt : now() },
-        deleted : null,
+  async inFlight() {
+    const query = {
+      ack: {$exists: true},
+      visible: {$gt: now()},
+      deleted: null,
     }
 
-    self.col.countDocuments(query, function(err, count) {
-        if (err) return callback(err)
-        callback(null, count)
-    })
-}
+    return this.col.countDocuments(query)
+  }
 
-Queue.prototype.done = function(callback) {
-    var self = this
-
-    var query = {
-        deleted : { $exists : true },
+  async done() {
+    const query = {
+      deleted: {$exists: true},
     }
 
-    self.col.countDocuments(query, function(err, count) {
-        if (err) return callback(err)
-        callback(null, count)
-    })
+    return this.col.countDocuments(query)
+  }
 }

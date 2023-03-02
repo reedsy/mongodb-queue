@@ -18,25 +18,14 @@ const collections = [
   'dead-queue-2',
 ]
 
-module.exports = function(callback) {
+module.exports = async function() {
   const client = new mongodb.MongoClient(url, { useNewUrlParser: true })
 
-  client.connect(err => {
-    // we can throw since this is test-only
-    if (err) throw err
+  await client.connect()
+  const db = client.db(dbName)
 
-    const db = client.db(dbName)
-
-    // empty out some collections to make sure there are no messages
-    let done = 0
-    collections.forEach((col) => {
-      db.collection(col).deleteMany(() => {
-        done += 1
-        if ( done === collections.length ) {
-          callback(client, db)
-        }
-      })
-    })
-  })
-
+  await Promise.all(
+      collections.map((col) => db.collection(col).deleteMany())
+  )
+  return {client, db}
 }
