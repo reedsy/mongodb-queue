@@ -36,6 +36,8 @@ jobs:
         NODE_AUTH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
     - name: Post-install
       run: npm rebuild && npm run prepare --if-present
+    - name: Lint
+      run: npm run lint
     - name: Test
       run: npm test
     - name: Tag
