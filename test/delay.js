@@ -1,7 +1,7 @@
 const test = require('tape')
 
 const setup = require('./setup.js')
-const MongoDbQueue = require('../')
+const MongoDbQueue = require('../').default
 const {timeout} = require('./_timeout.js')
 
 setup().then(({client, db}) => {
