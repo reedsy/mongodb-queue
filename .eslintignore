@@ -1,0 +1,8 @@
+*.json
+*.sh
+*.yml
+*.md
+*.d.ts
+*.js.map
+*.js
+!test/*.js
