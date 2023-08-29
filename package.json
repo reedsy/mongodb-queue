@@ -13,7 +13,8 @@
   "devDependencies": {
     "@reedsy/eslint-plugin": "^0.14.2",
     "eslint": "^8.35.0",
-    "mongodb": "^5.0.0",
+    "mongodb4": "npm:mongodb@^4.0.0",
+    "mongodb5": "npm:mongodb@^5.0.0",
     "tape": "^4.10.1",
     "typescript": "^4.9.5"
   },

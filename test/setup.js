@@ -1,4 +1,4 @@
-const mongodb = require('mongodb');
+const mongodb = require(process.env.MONGO_DRIVER || 'mongodb');
 
 const url = 'mongodb://localhost:27017/';
 const dbName = 'mongodb-queue';

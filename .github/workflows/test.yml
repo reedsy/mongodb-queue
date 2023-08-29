@@ -11,9 +11,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mongodb:
+        - 4.4
+        mongo_driver:
+        - mongodb4
+        - mongodb5
     services:
       mongodb:
-        image: mongo:4.4
+        image: mongo:${{ matrix.mongodb }}
         ports:
         - 27017:27017
     timeout-minutes: 10
@@ -40,6 +48,8 @@ jobs:
       run: npm run lint
     - name: Test
       run: npm test
+      env:
+        MONGO_DRIVER: ${{ matrix.mongo_driver }}
     - name: Tag
       if: ${{ github.ref == 'refs/heads/main' }}
       run: ./tag.sh
