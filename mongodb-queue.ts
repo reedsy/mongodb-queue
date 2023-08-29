@@ -139,10 +139,11 @@ export default class Queue<T = any> {
         visible: nowPlusSecs(visibility),
       },
     };
-    const options: FindOneAndUpdateOptions = {
+    const options = {
       sort: sort,
       returnDocument: 'after',
-    };
+      includeResultMetadata: true,
+    } satisfies FindOneAndUpdateOptions;
 
     const result = await this.col.findOneAndUpdate(query, update, options);
     const msg = result.value as WithId<Message<T>>;
@@ -183,9 +184,10 @@ export default class Queue<T = any> {
         visible: nowPlusSecs(visibility),
       },
     };
-    const options: FindOneAndUpdateOptions = {
+    const options = {
       returnDocument: 'after',
-    };
+      includeResultMetadata: true,
+    } satisfies FindOneAndUpdateOptions;
 
     if (opts.resetTries) {
       update.$set = {
@@ -212,9 +214,10 @@ export default class Queue<T = any> {
         deleted: now(),
       },
     };
-    const options: FindOneAndUpdateOptions = {
+    const options = {
       returnDocument: 'after',
-    };
+      includeResultMetadata: true,
+    } satisfies FindOneAndUpdateOptions;
     const msg = await this.col.findOneAndUpdate(query, update, options);
     if (!msg.value) {
       throw new Error('Queue.ack(): Unidentified ack : ' + ack);
