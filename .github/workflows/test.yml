@@ -19,6 +19,7 @@ jobs:
         mongo_driver:
         - mongodb4
         - mongodb5
+        - mongodb6
     services:
       mongodb:
         image: mongo:${{ matrix.mongodb }}
