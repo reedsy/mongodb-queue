@@ -16,6 +16,7 @@ jobs:
       matrix:
         mongodb:
         - 4.4
+        - 5.0
         mongo_driver:
         - mongodb4
         - mongodb5
