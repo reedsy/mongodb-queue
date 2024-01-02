@@ -118,7 +118,7 @@ export default class Queue<T = any> {
       });
     }
 
-    const results = await this.col.insertMany(msgs);
+    const results = await this.col.insertMany(msgs, {ignoreUndefined: true});
     if (payload instanceof Array) return '' + results.insertedIds;
     return '' + results.insertedIds[0];
   }
