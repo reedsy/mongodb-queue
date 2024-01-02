@@ -56,6 +56,17 @@ setup().then(({client, db}) => {
     t.end();
   });
 
+  test('remove undefined properties', async function(t) {
+    const queue = new MongoDbQueue(db, 'default');
+    const id = await queue.add({text: 'Hello, World!', undefinedProp: undefined});
+    t.ok(id, 'Received an id for this message');
+
+    const msg = await queue.get();
+    t.ok(msg.id, 'Got a msg.id');
+    t.equal('undefinedProp' in msg.payload, false, 'Payload has undefinedProp and it should be removed');
+    t.end();
+  });
+
   test('client.close()', function(t) {
     t.pass('client.close()');
     client.close();
