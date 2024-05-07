@@ -48,3 +48,14 @@ jobs:
       run: ./release.sh
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # A silly job just so we can mark this as the required check for PRs
+  # instead of maintaining the full list of matrix jobs
+  success:
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - name: Success
+      run: echo "Success"
