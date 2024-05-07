@@ -2,17 +2,17 @@ const test = require('tape');
 const {timeout} = require('./_timeout');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('first test', function(t) {
-    const queue = new MongoDbQueue(db, 'stats');
+    const queue = new MongoDBQueue(db, 'stats');
     t.ok(queue, 'Queue created ok');
     t.end();
   });
 
   test('stats for a single message added, received and acked', async function(t) {
-    const q = new MongoDbQueue(db, 'stats1');
+    const q = new MongoDBQueue(db, 'stats1');
 
     const id = await q.add('Hello, World!');
     t.ok(id, 'Received an id for this message');
@@ -39,7 +39,7 @@ setup().then(({client, db}) => {
   // then re-checking all stats.
 
   test('stats for a single message added, received, timed-out and back on queue', async function(t) {
-    const q = new MongoDbQueue(db, 'stats2', {visibility: 3});
+    const q = new MongoDBQueue(db, 'stats2', {visibility: 3});
 
     const id = await q.add('Hello, World!');
     t.ok(id, 'Received an id for this message');

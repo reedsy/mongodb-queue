@@ -2,11 +2,11 @@ const test = require('tape');
 const {timeout} = require('./_timeout');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('visibility: check message is back in queue after 3s', async function(t) {
-    const queue = new MongoDbQueue(db, 'visibility', {visibility: 3});
+    const queue = new MongoDBQueue(db, 'visibility', {visibility: 3});
     let msg;
 
     await queue.add('Hello, World!');
@@ -25,7 +25,7 @@ setup().then(({client, db}) => {
   });
 
   test("visibility: check that a late ack doesn't remove the msg", async function(t) {
-    const queue = new MongoDbQueue(db, 'visibility', {visibility: 3});
+    const queue = new MongoDBQueue(db, 'visibility', {visibility: 3});
     let msg;
 
     await queue.add('Hello, World!');
@@ -59,7 +59,7 @@ setup().then(({client, db}) => {
   });
 
   test('visibility: check visibility option overrides the queue visibility', async function(t) {
-    const queue = new MongoDbQueue(db, 'visibility', {visibility: 2});
+    const queue = new MongoDBQueue(db, 'visibility', {visibility: 2});
     let msg;
 
     await queue.add('Hello, World!');

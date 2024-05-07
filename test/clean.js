@@ -1,11 +1,11 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('clean: check deleted messages are deleted', async function(t) {
-    const q = new MongoDbQueue(db, 'clean', {visibility: 3});
+    const q = new MongoDBQueue(db, 'clean', {visibility: 3});
 
     t.equal(await q.size(), 0, 'There is currently nothing on the queue');
     t.equal(await q.total(), 0, 'There is currently nothing in the queue at all');

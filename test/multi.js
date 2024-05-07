@@ -1,13 +1,13 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 const total = 250;
 
 setup().then(({client, db}) => {
   test('multi: add ' + total + ' messages, get ' + total + ' back', async function(t) {
-    const queue = new MongoDbQueue(db, 'multi');
+    const queue = new MongoDBQueue(db, 'multi');
     const msgs = [];
 
     for (let i = 0; i < total; i++) await queue.add('no=' + i);
