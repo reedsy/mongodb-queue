@@ -1,18 +1,18 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('first test', function(t) {
-    const queue = new MongoDbQueue(db, 'queue', {visibility: 3, deadQueue: 'dead-queue'});
+    const queue = new MongoDBQueue(db, 'queue', {visibility: 3, deadQueue: 'dead-queue'});
     t.ok(queue, 'Queue created ok');
     t.end();
   });
 
   test('single message going over 5 tries, should appear on dead-queue', async function(t) {
-    const deadQueue = new MongoDbQueue(db, 'dead-queue');
-    const queue = new MongoDbQueue(db, 'queue', {visibility: 1, deadQueue: deadQueue});
+    const deadQueue = new MongoDBQueue(db, 'dead-queue');
+    const queue = new MongoDBQueue(db, 'queue', {visibility: 1, deadQueue: deadQueue});
     let msg;
 
     const origId = await queue.add('Hello, World!');
@@ -41,8 +41,8 @@ setup().then(({client, db}) => {
   });
 
   test('two messages, with first going over 3 tries', async function(t) {
-    const deadQueue = new MongoDbQueue(db, 'dead-queue-2');
-    const queue = new MongoDbQueue(db, 'queue-2', {visibility: 1, deadQueue: deadQueue, maxRetries: 3});
+    const deadQueue = new MongoDBQueue(db, 'dead-queue-2');
+    const queue = new MongoDBQueue(db, 'queue-2', {visibility: 1, deadQueue: deadQueue, maxRetries: 3});
     let msg;
 
     const origId = await queue.add('Hello, World!');

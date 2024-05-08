@@ -1,13 +1,13 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 const total = 250;
 
 setup().then(({client, db}) => {
   test('many: add ' + total + ' messages, get ' + total + ' back', async function(t) {
-    const queue = new MongoDbQueue(db, 'many');
+    const queue = new MongoDBQueue(db, 'many');
     const msgs = [];
     const msgsToQueue = [];
 
@@ -36,7 +36,7 @@ setup().then(({client, db}) => {
   });
 
   test('many: add no messages, receive err in callback', async function(t) {
-    const queue = new MongoDbQueue(db, 'many');
+    const queue = new MongoDBQueue(db, 'many');
     await queue.add([])
       .catch(() => t.pass('got error'));
     t.end();

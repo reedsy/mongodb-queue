@@ -4,3 +4,13 @@ parserOptions:
   project: './tsconfig.json'
 env:
   node: true
+rules:
+  # default exports have bad CJS/ESM interoperability
+  no-restricted-exports:
+    - error
+    - restrictDefaultExports:
+        direct: true
+        named: true
+        defaultFrom: true
+        namedFrom: true
+        namespaceFrom: true

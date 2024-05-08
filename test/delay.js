@@ -1,12 +1,12 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 const {timeout} = require('./_timeout.js');
 
 setup().then(({client, db}) => {
   test('delay: check messages on this queue are returned after the delay', async function(t) {
-    const queue = new MongoDbQueue(db, 'delay', {delay: 3});
+    const queue = new MongoDBQueue(db, 'delay', {delay: 3});
     let msg;
 
     const id = await queue.add('Hello, World!');
@@ -27,7 +27,7 @@ setup().then(({client, db}) => {
   });
 
   test('delay: check an individual message delay overrides the queue delay', async function(t) {
-    const queue = new MongoDbQueue(db, 'delay');
+    const queue = new MongoDBQueue(db, 'delay');
     let msg;
 
     const id = await queue.add('I am delayed by 3 seconds', {delay: 3});

@@ -28,7 +28,7 @@ function nowPlusSecs(secs: number): string {
 export type QueueOptions = {
   visibility?: number;
   delay?: number;
-  deadQueue?: Queue;
+  deadQueue?: MongoDBQueue;
   maxRetries?: number;
 };
 
@@ -63,12 +63,12 @@ export type ExternalMessage<T = any> = {
   tries: number;
 };
 
-export default class Queue<T = any> {
+export class MongoDBQueue<T = any> {
   private readonly col: Collection<Partial<Message<T>>>;
   private readonly visibility: number;
   private readonly delay: number;
   private readonly maxRetries: number;
-  private readonly deadQueue: Queue;
+  private readonly deadQueue: MongoDBQueue;
 
   public constructor(db: Db, name: string, opts: QueueOptions = {}) {
     if (!db) {

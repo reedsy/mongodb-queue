@@ -1,11 +1,11 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('visibility: check message is back in queue after 3s', async function(t) {
-    const queue = new MongoDbQueue(db, 'visibility', {visibility: 3});
+    const queue = new MongoDBQueue(db, 'visibility', {visibility: 3});
 
     await queue.createIndexes();
     t.pass('Indexes created');

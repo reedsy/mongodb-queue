@@ -2,11 +2,11 @@ const test = require('tape');
 const {timeout} = require('./_timeout');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('ping: check a retrieved message with a ping can still be acked', async function(t) {
-    const queue = new MongoDbQueue(db, 'ping', {visibility: 5});
+    const queue = new MongoDBQueue(db, 'ping', {visibility: 5});
     let msg;
     let id;
 
@@ -30,7 +30,7 @@ setup().then(({client, db}) => {
   });
 
   test("ping: check that an acked message can't be pinged", async function(t) {
-    const queue = new MongoDbQueue(db, 'ping', {visibility: 5});
+    const queue = new MongoDBQueue(db, 'ping', {visibility: 5});
     let id;
 
     id = await queue.add('Hello, World!');
@@ -51,7 +51,7 @@ setup().then(({client, db}) => {
   });
 
   test('ping: check visibility option overrides the queue visibility', async function(t) {
-    const queue = new MongoDbQueue(db, 'ping', {visibility: 3});
+    const queue = new MongoDBQueue(db, 'ping', {visibility: 3});
     let msg;
     let id;
 
@@ -84,7 +84,7 @@ setup().then(({client, db}) => {
   });
 
   test('ping: reset tries', async function(t) {
-    const queue = new MongoDbQueue(db, 'ping', {visibility: 3});
+    const queue = new MongoDBQueue(db, 'ping', {visibility: 3});
     let msg;
     let id;
 

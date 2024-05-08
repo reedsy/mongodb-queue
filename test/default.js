@@ -1,17 +1,17 @@
 const test = require('tape');
 
 const setup = require('./setup.js');
-const MongoDbQueue = require('../').default;
+const {MongoDBQueue} = require('../');
 
 setup().then(({client, db}) => {
   test('first test', function(t) {
-    const queue = new MongoDbQueue(db, 'default');
+    const queue = new MongoDBQueue(db, 'default');
     t.ok(queue, 'Queue created ok');
     t.end();
   });
 
   test('single round trip', async function(t) {
-    const queue = new MongoDbQueue(db, 'default');
+    const queue = new MongoDBQueue(db, 'default');
     let id;
 
     id = await queue.add('Hello, World!');
@@ -33,7 +33,7 @@ setup().then(({client, db}) => {
   });
 
   test("single round trip, can't be acked again", async function(t) {
-    const queue = new MongoDbQueue(db, 'default');
+    const queue = new MongoDBQueue(db, 'default');
     let id;
 
     id = await queue.add('Hello, World!');
@@ -57,7 +57,7 @@ setup().then(({client, db}) => {
   });
 
   test('remove undefined properties', async function(t) {
-    const queue = new MongoDbQueue(db, 'default');
+    const queue = new MongoDBQueue(db, 'default');
     const id = await queue.add({text: 'Hello, World!', undefinedProp: undefined});
     t.ok(id, 'Received an id for this message');
 
