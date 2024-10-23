@@ -130,7 +130,7 @@ export class MongoDBQueue<T = any> {
       visible: {$lte: now()},
     };
     const sort: Sort = {
-      _id: 1,
+      visible: 1,
     };
     const update: UpdateFilter<Message<T>> = {
       $inc: {tries: 1},
