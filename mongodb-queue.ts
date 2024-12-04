@@ -10,12 +10,7 @@
  *
  **/
 
-import {randomBytes} from 'crypto';
-import {Collection, Db, Filter, FindOneAndUpdateOptions, Sort, UpdateFilter, WithId} from 'mongodb';
-
-function id(): string {
-  return randomBytes(16).toString('hex');
-}
+import {Collection, Db, Filter, FindOneAndUpdateOptions, ObjectId, Sort, UpdateFilter, WithId} from 'mongodb';
 
 function now(): string {
   return (new Date()).toISOString();
@@ -135,7 +130,7 @@ export class MongoDBQueue<T = any> {
     const update: UpdateFilter<Message<T>> = {
       $inc: {tries: 1},
       $set: {
-        ack: id(),
+        ack: new ObjectId().toHexString(),
         visible: nowPlusSecs(visibility),
       },
     };
