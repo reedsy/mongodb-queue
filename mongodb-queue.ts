@@ -208,6 +208,9 @@ export class MongoDBQueue<T = any> {
       $set: {
         deleted: now(),
       },
+      $unset: {
+        visible: 1,
+      },
     };
     const options = {
       returnDocument: 'after',
