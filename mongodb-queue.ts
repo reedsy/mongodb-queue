@@ -48,7 +48,7 @@ export type BaseMessage<T = any> = {
 export type Message<T = any> = BaseMessage<T> & {
   ack: string;
   tries: number;
-  deleted?: string;
+  deleted?: Date;
 };
 
 export type ExternalMessage<T = any> = {
@@ -206,7 +206,7 @@ export class MongoDBQueue<T = any> {
     };
     const update: UpdateFilter<Message<T>> = {
       $set: {
-        deleted: now(),
+        deleted: new Date(),
       },
       $unset: {
         visible: 1,
