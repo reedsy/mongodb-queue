@@ -85,9 +85,17 @@ export class MongoDBQueue<T = any> {
 
   public async createIndexes(): Promise<void> {
     await Promise.all([
-      this.col.createIndex({deleted: 1, visible: 1}),
+      this.col.createIndex({visible: 1}, {sparse: true}),
       this.col.createIndex({ack: 1}, {unique: true, sparse: true}),
       this.col.createIndex({deleted: 1}, {sparse: true}),
+
+      // Index for efficient counts on in-flight
+      this.col.createIndex({visible: 1, ack: 1}, {
+        partialFilterExpression: {
+          visible: {$exists: true},
+          ack: {$exists: true},
+        },
+      }),
     ]);
   }
 
@@ -121,7 +129,6 @@ export class MongoDBQueue<T = any> {
   public async get(opts: GetOptions = {}): Promise<ExternalMessage<T> | null> {
     const visibility = opts.visibility || this.visibility;
     const query: Filter<Partial<Message<T>>> = {
-      deleted: {$exists: false},
       visible: {$lte: now()},
     };
     const sort: Sort = {
@@ -172,7 +179,6 @@ export class MongoDBQueue<T = any> {
     const query: Filter<Partial<Message<T>>> = {
       ack: ack,
       visible: {$gt: now()},
-      deleted: {$exists: false},
     };
     const update: UpdateFilter<Message<T>> = {
       $set: {
@@ -202,7 +208,6 @@ export class MongoDBQueue<T = any> {
     const query: Filter<Partial<Message<T>>> = {
       ack: ack,
       visible: {$gt: now()},
-      deleted: {$exists: false},
     };
     const update: UpdateFilter<Message<T>> = {
       $set: {
@@ -237,16 +242,17 @@ export class MongoDBQueue<T = any> {
 
   public async size(): Promise<number> {
     return this.col.countDocuments({
-      deleted: {$exists: false},
       visible: {$lte: now()},
     });
   }
 
   public async inFlight(): Promise<number> {
     return this.col.countDocuments({
-      ack: {$exists: true},
+      // For some unknown reason, MongoDB refuses to use the partial index with
+      // {$exists: true}, but *will* use it if we use {$gt: ''}
+      // https://www.mongodb.com/community/forums/t/partial-index-is-not-used-during-search/290507/2
+      ack: {$gt: ''},
       visible: {$gt: now()},
-      deleted: {$exists: false},
     });
   }
 
