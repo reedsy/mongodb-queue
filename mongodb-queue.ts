@@ -10,7 +10,7 @@
  *
  **/
 
-import {Collection, Db, Filter, FindOneAndUpdateOptions, ObjectId, Sort, UpdateFilter, WithId} from 'mongodb';
+import {Collection, CreateIndexesOptions, Db, Filter, FindOneAndUpdateOptions, ObjectId, Sort, UpdateFilter, WithId} from 'mongodb';
 
 function now(): string {
   return (new Date()).toISOString();
@@ -25,6 +25,7 @@ export type QueueOptions = {
   delay?: number;
   deadQueue?: MongoDBQueue;
   maxRetries?: number;
+  expireAfterSeconds?: number;
 };
 
 export type AddOptions = {
@@ -64,6 +65,7 @@ export class MongoDBQueue<T = any> {
   private readonly delay: number;
   private readonly maxRetries: number;
   private readonly deadQueue: MongoDBQueue;
+  private readonly expireAfterSeconds: number;
 
   public constructor(db: Db, name: string, opts: QueueOptions = {}) {
     if (!db) {
@@ -76,6 +78,7 @@ export class MongoDBQueue<T = any> {
     this.col = db.collection(name);
     this.visibility = opts.visibility || 30;
     this.delay = opts.delay || 0;
+    this.expireAfterSeconds = opts.expireAfterSeconds;
 
     if (opts.deadQueue) {
       this.deadQueue = opts.deadQueue;
@@ -84,10 +87,15 @@ export class MongoDBQueue<T = any> {
   }
 
   public async createIndexes(): Promise<void> {
+    const deletedOptions: CreateIndexesOptions = {sparse: true};
+    if (typeof this.expireAfterSeconds === 'number') {
+      deletedOptions.expireAfterSeconds = this.expireAfterSeconds;
+    }
+
     await Promise.all([
       this.col.createIndex({visible: 1}, {sparse: true}),
       this.col.createIndex({ack: 1}, {unique: true, sparse: true}),
-      this.col.createIndex({deleted: 1}, {sparse: true}),
+      this.col.createIndex({deleted: 1}, deletedOptions),
 
       // Index for efficient counts on in-flight
       this.col.createIndex({visible: 1, ack: 1}, {
