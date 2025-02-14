@@ -39,6 +39,7 @@ export type GetOptions = {
 export type PingOptions = {
   visibility?: number;
   resetTries?: boolean;
+  resetAck?: boolean;
 };
 
 export type BaseMessage<T = any> = {
@@ -203,6 +204,10 @@ export class MongoDBQueue<T = any> {
         ...update.$set,
         tries: 0,
       };
+    }
+
+    if (opts.resetAck) {
+      update.$unset = {ack: 1};
     }
 
     const msg = await this.col.findOneAndUpdate(query, update, options);
