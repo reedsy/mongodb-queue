@@ -109,6 +109,33 @@ setup().then(({client, db}) => {
     t.end();
   });
 
+  test('ping: reset ack', async function(t) {
+    const queue = new MongoDBQueue(db, 'ping', {visibility: 3});
+    let msg;
+    let id;
+
+    id = await queue.add('Hello, World!');
+    t.ok(id, 'There is an id returned when adding a message.');
+    msg = await queue.get();
+    const ack = msg.ack;
+    // message should reset in three seconds
+    t.ok(msg.id, 'Got a msg.id (sanity check)');
+    await timeout(2000);
+    id = await queue.ping(msg.ack, {resetAck: true});
+    t.ok(id, 'Received an id when acking this message');
+    // wait until the msg has returned to the queue
+    await timeout(6000);
+    msg = await queue.get();
+    t.notEqual(ack, msg.ack, 'Ack was reset');
+    await queue.ack(msg.ack);
+    msg = await queue.get();
+    // no more messages
+    t.ok(!msg, 'No msg received');
+
+    t.pass('Finished test ok');
+    t.end();
+  });
+
   test('client.close()', function(t) {
     t.pass('client.close()');
     client.close();
