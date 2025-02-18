@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         mongodb:
-        - '6.0'
+        - '7.0'
         mongo_driver:
         - mongodb6
     services:
