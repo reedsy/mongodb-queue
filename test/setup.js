@@ -19,7 +19,7 @@ const collections = [
 ];
 
 module.exports = async function() {
-  const client = new mongodb.MongoClient(url, {useNewUrlParser: true});
+  const client = new mongodb.MongoClient(url);
 
   await client.connect();
   const db = client.db(dbName);
