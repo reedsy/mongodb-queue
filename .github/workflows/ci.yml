@@ -15,9 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         mongodb:
-        - '7.0'
+        - '8.0'
         mongo_driver:
         - mongodb6
+        - mongodb7
     services:
       mongodb:
         image: mongo:${{ matrix.mongodb }}
