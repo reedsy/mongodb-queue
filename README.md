@@ -376,7 +376,7 @@ without inserting a new document:
 ```js
 const msg = await queue.get();
 const id = await queue.reEnqueue(msg.ack);
-// this message is immediately available again, with tries reset to 0
+// this message is immediately available again, and its tries counter restarts (next get() will return tries=1)
 ```
 
 Unlike `.ping(ack, { resetTries: true, resetAck: true })`, this also resets the
