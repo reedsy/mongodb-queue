@@ -18,6 +18,8 @@ setup().then(({client, db}) => {
     t.equal(requeued.id, id, 'Same document id after re-enqueue');
     t.equal(requeued.tries, 1, 'Tries restarted from zero');
     t.notEqual(requeued.ack, msg.ack, 'The old ack no longer applies');
+    // ack so it doesn't linger reserved and leak into the next test on this collection
+    await queue.ack(requeued.ack);
 
     t.end();
   });
