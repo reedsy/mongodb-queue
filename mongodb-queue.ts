@@ -241,6 +241,31 @@ export class MongoDBQueue<T = any> {
     return '' + msg.value._id;
   }
 
+  public async reEnqueue(ack: string): Promise<string> {
+    const query: Filter<Partial<Message<T>>> = {
+      ack: ack,
+      visible: {$gt: now()},
+    };
+    const update: UpdateFilter<Message<T>> = {
+      $set: {
+        visible: now(),
+      },
+      $unset: {
+        ack: 1,
+        tries: 1,
+      },
+    };
+    const options = {
+      returnDocument: 'after',
+      includeResultMetadata: true,
+    } satisfies FindOneAndUpdateOptions;
+    const msg = await this.col.findOneAndUpdate(query, update, options);
+    if (!msg.value) {
+      throw new Error('Queue.reEnqueue(): Unidentified ack : ' + ack);
+    }
+    return '' + msg.value._id;
+  }
+
   public async clean(): Promise<void> {
     const query = {
       deleted: {$exists: true},
