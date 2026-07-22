@@ -202,7 +202,7 @@ export class MongoDBQueue<T = any> {
       update.$unset = {ack: 1};
     }
 
-    return this.updateByAck('ping', ack, update);
+    return this.updateByAck(ack, update);
   }
 
   public async ack(ack: string): Promise<string> {
@@ -214,7 +214,7 @@ export class MongoDBQueue<T = any> {
         visible: 1,
       },
     };
-    return this.updateByAck('ack', ack, update);
+    return this.updateByAck(ack, update);
   }
 
   public async reEnqueue(ack: string): Promise<string> {
@@ -227,7 +227,7 @@ export class MongoDBQueue<T = any> {
         tries: 1,
       },
     };
-    return this.updateByAck('reEnqueue', ack, update);
+    return this.updateByAck(ack, update);
   }
 
   public async clean(): Promise<void> {
@@ -264,7 +264,7 @@ export class MongoDBQueue<T = any> {
     });
   }
 
-  private async updateByAck(methodName: string, ack: string, update: UpdateFilter<Message<T>>): Promise<string> {
+  private async updateByAck(ack: string, update: UpdateFilter<Message<T>>): Promise<string> {
     const query: Filter<Partial<Message<T>>> = {
       ack: ack,
       visible: {$gt: now()},
@@ -276,7 +276,7 @@ export class MongoDBQueue<T = any> {
 
     const msg = await this.col.findOneAndUpdate(query, update, options);
     if (!msg.value) {
-      throw new Error(`Queue.${methodName}(): Unidentified ack : ` + ack);
+      throw new Error('Queue: Unidentified ack : ' + ack);
     }
     return '' + msg.value._id;
   }
