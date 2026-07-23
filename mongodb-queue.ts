@@ -185,19 +185,11 @@ export class MongoDBQueue<T = any> {
 
   public async ping(ack: string, opts: PingOptions = {}): Promise<string> {
     const visibility = opts.visibility || this.visibility;
-    const query: Filter<Partial<Message<T>>> = {
-      ack: ack,
-      visible: {$gt: now()},
-    };
     const update: UpdateFilter<Message<T>> = {
       $set: {
         visible: nowPlusSecs(visibility),
       },
     };
-    const options = {
-      returnDocument: 'after',
-      includeResultMetadata: true,
-    } satisfies FindOneAndUpdateOptions;
 
     if (opts.resetTries) {
       update.$set = {
@@ -210,18 +202,10 @@ export class MongoDBQueue<T = any> {
       update.$unset = {ack: 1};
     }
 
-    const msg = await this.col.findOneAndUpdate(query, update, options);
-    if (!msg.value) {
-      throw new Error('Queue.ping(): Unidentified ack  : ' + ack);
-    }
-    return '' + msg.value._id;
+    return this.updateByAck(ack, update);
   }
 
   public async ack(ack: string): Promise<string> {
-    const query: Filter<Partial<Message<T>>> = {
-      ack: ack,
-      visible: {$gt: now()},
-    };
     const update: UpdateFilter<Message<T>> = {
       $set: {
         deleted: new Date(),
@@ -230,15 +214,20 @@ export class MongoDBQueue<T = any> {
         visible: 1,
       },
     };
-    const options = {
-      returnDocument: 'after',
-      includeResultMetadata: true,
-    } satisfies FindOneAndUpdateOptions;
-    const msg = await this.col.findOneAndUpdate(query, update, options);
-    if (!msg.value) {
-      throw new Error('Queue.ack(): Unidentified ack : ' + ack);
-    }
-    return '' + msg.value._id;
+    return this.updateByAck(ack, update);
+  }
+
+  public async reEnqueue(ack: string): Promise<string> {
+    const update: UpdateFilter<Message<T>> = {
+      $set: {
+        visible: now(),
+      },
+      $unset: {
+        ack: 1,
+        tries: 1,
+      },
+    };
+    return this.updateByAck(ack, update);
   }
 
   public async clean(): Promise<void> {
@@ -273,5 +262,22 @@ export class MongoDBQueue<T = any> {
     return this.col.countDocuments({
       deleted: {$exists: true},
     });
+  }
+
+  private async updateByAck(ack: string, update: UpdateFilter<Message<T>>): Promise<string> {
+    const query: Filter<Partial<Message<T>>> = {
+      ack: ack,
+      visible: {$gt: now()},
+    };
+    const options = {
+      returnDocument: 'after',
+      includeResultMetadata: true,
+    } satisfies FindOneAndUpdateOptions;
+
+    const msg = await this.col.findOneAndUpdate(query, update, options);
+    if (!msg.value) {
+      throw new Error('Queue: Unidentified ack : ' + ack);
+    }
+    return '' + msg.value._id;
   }
 }

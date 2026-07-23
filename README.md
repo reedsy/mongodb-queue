@@ -368,6 +368,20 @@ queue.get((err, msg) => {
 })
 ```
 
+### .reEnqueue() ###
+
+Atomically resets a message's tries and ack so it's immediately available again,
+without inserting a new document:
+
+```js
+const msg = await queue.get();
+const id = await queue.reEnqueue(msg.ack);
+// this message is immediately available again, and its tries counter restarts (next get() will return tries=1)
+```
+
+Unlike `.ping(ack, { resetTries: true, resetAck: true })`, this also resets the
+message's visibility immediately, rather than keeping the current window.
+
 ### .total() ###
 
 Returns the total number of messages that has ever been in the queue, including
