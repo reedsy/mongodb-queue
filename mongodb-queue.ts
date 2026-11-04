@@ -230,6 +230,24 @@ export class MongoDBQueue<T = any> {
     return this.updateByAck(ack, update);
   }
 
+  public async removeNotInFlight(payload: Partial<T>): Promise<number> {
+    const entries = Object.entries(payload);
+    // an empty or undefined match would delete every message not in flight
+    if (!entries.length || entries.some(([, value]) => value === undefined)) {
+      throw new Error('Queue: removeNotInFlight needs at least one defined payload field');
+    }
+
+    const query: Filter<Partial<Message<T>>> = {
+      $nor: [{ack: {$gt: ''}, visible: {$gt: now()}}],
+    };
+    for (const [key, value] of entries) {
+      (query as Record<string, unknown>)[`payload.${key}`] = value;
+    }
+
+    const {deletedCount} = await this.col.deleteMany(query);
+    return deletedCount;
+  }
+
   public async clean(): Promise<void> {
     const query = {
       deleted: {$exists: true},

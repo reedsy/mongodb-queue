@@ -382,6 +382,18 @@ const id = await queue.reEnqueue(msg.ack);
 Unlike `.ping(ack, { resetTries: true, resetAck: true })`, this also resets the
 message's visibility immediately, rather than keeping the current window.
 
+### .removeNotInFlight() ###
+
+Deletes the messages whose payload has the given field values, unless they are in
+flight (received and still within their visibility window). Waiting, processed and
+expired messages are all removed. Returns the number of messages deleted. Throws
+if the payload has no fields, or a field is `undefined`, rather than matching everything:
+
+```js
+const removed = await queue.removeNotInFlight({userId: '123'});
+// a message being processed is kept, so its ack still succeeds
+```
+
 ### .total() ###
 
 Returns the total number of messages that has ever been in the queue, including
