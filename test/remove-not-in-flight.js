@@ -61,6 +61,16 @@ setup().then(({client, db}) => {
     t.end();
   });
 
+  test('removeNotInFlight: matches an operator-like value literally', async function(t) {
+    await queue.add({userId: 'a'});
+
+    t.equal(await queue.removeNotInFlight({userId: {$exists: true}}), 0, 'Nothing removed');
+    t.equal(await queue.total(), 1, 'Message is left');
+    await queue.removeNotInFlight({userId: 'a'});
+
+    t.end();
+  });
+
   test('removeNotInFlight: refuses an empty or undefined match', async function(t) {
     await queue.add({userId: 'a'});
 

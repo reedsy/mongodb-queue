@@ -241,7 +241,8 @@ export class MongoDBQueue<T = any> {
       $nor: [{ack: {$gt: ''}, visible: {$gt: now()}}],
     };
     for (const [key, value] of entries) {
-      (query as Record<string, unknown>)[`payload.${key}`] = value;
+      // $eq so an operator object is matched literally rather than run as a predicate
+      (query as Record<string, unknown>)[`payload.${key}`] = {$eq: value};
     }
 
     const {deletedCount} = await this.col.deleteMany(query);
