@@ -30,6 +30,8 @@ export type QueueOptions = {
 
 export type AddOptions = {
   delay?: number;
+  // stored as the message's _id, so a second add() with the same id fails with a duplicate key error
+  id?: string;
 };
 
 export type GetOptions = {
@@ -43,6 +45,7 @@ export type PingOptions = {
 };
 
 export type BaseMessage<T = any> = {
+  _id?: ObjectId | string;
   payload: T;
   visible: string;
 };
@@ -114,6 +117,9 @@ export class MongoDBQueue<T = any> {
 
     const msgs: BaseMessage<T>[] = [];
     if (payload instanceof Array) {
+      if (opts.id) {
+        throw new Error('Queue.add(): id can only be set for a single payload');
+      }
       if (payload.length === 0) {
         throw new Error('Queue.add(): Array payload length must be greater than 0');
       }
@@ -125,6 +131,7 @@ export class MongoDBQueue<T = any> {
       });
     } else {
       msgs.push({
+        _id: opts.id,
         visible: visible,
         payload: payload,
       });
@@ -228,6 +235,23 @@ export class MongoDBQueue<T = any> {
       },
     };
     return this.updateByAck(ack, update);
+  }
+
+  // only finds messages added with the `id` option: a generated _id is an ObjectId, which a string won't match
+  public async removeNotInFlight(id: string): Promise<boolean> {
+    if (!id) {
+      throw new Error('Queue.removeNotInFlight(): provide an id');
+    }
+
+    const {deletedCount} = await this.col.deleteOne({
+      _id: id,
+      $or: [
+        {ack: {$exists: false}},
+        {visible: {$exists: false}},
+        {visible: {$lte: now()}},
+      ],
+    });
+    return deletedCount > 0;
   }
 
   public async clean(): Promise<void> {

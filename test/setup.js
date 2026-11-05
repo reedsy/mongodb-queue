@@ -17,6 +17,7 @@ const collections = [
   'queue-2',
   'dead-queue-2',
   're-enqueue',
+  'remove-not-in-flight',
 ];
 
 module.exports = async function() {
