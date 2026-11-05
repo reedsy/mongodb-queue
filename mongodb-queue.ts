@@ -245,7 +245,11 @@ export class MongoDBQueue<T = any> {
 
     const {deletedCount} = await this.col.deleteOne({
       _id: id,
-      $nor: [{ack: {$gt: ''}, visible: {$gt: now()}}],
+      $or: [
+        {ack: {$exists: false}},
+        {visible: {$exists: false}},
+        {visible: {$lte: now()}},
+      ],
     });
     return deletedCount > 0;
   }
