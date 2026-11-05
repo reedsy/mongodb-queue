@@ -30,6 +30,8 @@ export type QueueOptions = {
 
 export type AddOptions = {
   delay?: number;
+  // stored as the message's _id, so a second add() with the same id fails with a duplicate key error
+  id?: string;
 };
 
 export type GetOptions = {
@@ -43,6 +45,7 @@ export type PingOptions = {
 };
 
 export type BaseMessage<T = any> = {
+  _id?: ObjectId | string;
   payload: T;
   visible: string;
 };
@@ -114,6 +117,9 @@ export class MongoDBQueue<T = any> {
 
     const msgs: BaseMessage<T>[] = [];
     if (payload instanceof Array) {
+      if (opts.id) {
+        throw new Error('Queue.add(): id can only be set for a single payload');
+      }
       if (payload.length === 0) {
         throw new Error('Queue.add(): Array payload length must be greater than 0');
       }
@@ -125,6 +131,7 @@ export class MongoDBQueue<T = any> {
       });
     } else {
       msgs.push({
+        _id: opts.id,
         visible: visible,
         payload: payload,
       });
@@ -230,23 +237,16 @@ export class MongoDBQueue<T = any> {
     return this.updateByAck(ack, update);
   }
 
-  public async removeNotInFlight(payload: Partial<T>): Promise<number> {
-    const entries = Object.entries(payload);
-    // an empty or undefined match would delete every message not in flight
-    if (!entries.length || entries.some(([, value]) => value === undefined)) {
-      throw new Error('Queue: removeNotInFlight needs at least one defined payload field');
+  public async removeNotInFlight(id: string): Promise<boolean> {
+    if (!id) {
+      throw new Error('Queue.removeNotInFlight(): provide an id');
     }
 
-    const query: Filter<Partial<Message<T>>> = {
+    const {deletedCount} = await this.col.deleteOne({
+      _id: id,
       $nor: [{ack: {$gt: ''}, visible: {$gt: now()}}],
-    };
-    for (const [key, value] of entries) {
-      // $eq so an operator object is matched literally rather than run as a predicate
-      (query as Record<string, unknown>)[`payload.${key}`] = {$eq: value};
-    }
-
-    const {deletedCount} = await this.col.deleteMany(query);
-    return deletedCount;
+    });
+    return deletedCount > 0;
   }
 
   public async clean(): Promise<void> {

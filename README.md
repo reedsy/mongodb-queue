@@ -290,6 +290,15 @@ queue.add('Later', { delay: 120 }, (err, id) => {
 })
 ```
 
+You can set a single message's id with the `id` option, so it can be found later
+(e.g. by `.removeNotInFlight()`). Adding a second message with the same id fails
+with a duplicate key error:
+
+```js
+const id = await queue.add({ userId: '123' }, { id: '123' })
+// id === '123'
+```
+
 ### .get() ###
 
 Retrieve a message from the queue:
@@ -384,15 +393,20 @@ message's visibility immediately, rather than keeping the current window.
 
 ### .removeNotInFlight() ###
 
-Deletes the messages whose payload has the given field values, unless they are in
-flight (received and still within their visibility window). Waiting, processed and
-expired messages are all removed. Returns the number of messages deleted. Throws
-if the payload has no fields, or a field is `undefined`, rather than matching everything:
+Deletes the message with the given id, unless it is in flight (received and still
+within its visibility window). A waiting, processed or expired message is removed.
+Set the id when adding the message, so it can be found again later. Returns whether
+a message was deleted:
 
 ```js
-const removed = await queue.removeNotInFlight({userId: '123'});
-// a message being processed is kept, so its ack still succeeds
+await queue.add({userId: '123'}, {id: '123'});
+// later, to replace it
+await queue.removeNotInFlight('123');
+await queue.add({userId: '123'}, {id: '123', delay: 3600});
 ```
+
+A message being processed is kept, so its ack still succeeds, and a second `add()`
+with the same id then fails with a duplicate key error.
 
 ### .total() ###
 
