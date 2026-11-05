@@ -10,7 +10,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # MongoDB 8 refuses to start on the kernel of newer runner images
+    # https://jira.mongodb.org/browse/SERVER-136848
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
