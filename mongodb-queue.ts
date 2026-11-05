@@ -237,6 +237,7 @@ export class MongoDBQueue<T = any> {
     return this.updateByAck(ack, update);
   }
 
+  // only finds messages added with the `id` option: a generated _id is an ObjectId, which a string won't match
   public async removeNotInFlight(id: string): Promise<boolean> {
     if (!id) {
       throw new Error('Queue.removeNotInFlight(): provide an id');

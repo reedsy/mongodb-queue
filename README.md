@@ -395,8 +395,9 @@ message's visibility immediately, rather than keeping the current window.
 
 Deletes the message with the given id, unless it is in flight (received and still
 within its visibility window). A waiting, processed or expired message is removed.
-Set the id when adding the message, so it can be found again later. Returns whether
-a message was deleted:
+Set the id when adding the message, so it can be found again later: an id generated
+by MongoDB is an `ObjectId`, which a string id won't match. Returns whether a message
+was deleted:
 
 ```js
 await queue.add({userId: '123'}, {id: '123'});
